@@ -17,7 +17,13 @@ class Settings(BaseSettings):
     VAULT_TOKEN: str | None = None
     VAULT_DB_SECRET_PATH: str = "db-creds"
 
+    # app/config.py (add into class Settings)
+    # LLM settings
     OPENAI_API_KEY: str | None = None
+    OAI_MODEL: str = "gpt-4o-mini"    # safe, fast, cheap default
+    OAI_TIMEOUT_SECONDS: int = 30
+
+    VAULT_OPENAI_SECRET_PATH: str = "openai"
 
     class Config:
         env_file = ".env"

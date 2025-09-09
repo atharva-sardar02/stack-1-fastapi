@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from .config import Settings
 from .routers import tasks
+from .routers import ai as ai_router
 # put a small icon at app/static/favicon.ico
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -29,3 +30,4 @@ def health():
 #routes
 
 app.include_router(tasks.router)
+app.include_router(ai_router.router)

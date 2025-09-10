@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-seed
+  namespace: stack1
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: vault-seed
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seeder
+          image: hashicorp/vault:1.16
+          env:
+            - name: VAULT_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: VAULT_ADDR
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: VAULT_TOKEN
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            # Optional (won't block pod start if missing)
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+          command: ["/bin/sh","-lc"]
+          args:
+            - |
+              set -e
+              echo "Waiting for Vault..."
+              for i in $(seq 1 60); do
+                vault status >/dev/null 2>&1 && break || sleep 1
+              done
+
+              echo "Seeding DB secret..."
+              vault kv put secret/db-creds POSTGRES_PASSWORD="${DB_PASSWORD}"
+
+              if [ -n "${OPENAI_API_KEY}" ]; then
+                echo "Seeding OpenAI key..."
+                vault kv put secret/openai OPENAI_API_KEY="${OPENAI_API_KEY}"
+              else
+                echo "No OPENAI_API_KEY provided; skipping."
+              fi
+
+              echo "Done."

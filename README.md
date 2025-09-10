@@ -261,15 +261,29 @@ stack-1-fastapi/
 
 ---
 
-## ✅ Done so far
+## Run on Kubernetes (kind) with Vault
 
-* Step 1: FastAPI basics
-* Step 2: Docker + Postgres (Compose, hot-reload dev)
-* Step 3: Vault (API pulls DB secret from KV v2)
+```powershell
+# 1) Create kind cluster with host port mapping (30080 -> 8000)
+kind create cluster --config k8s/kind.yaml --name stack1
 
-**Next up**: 12-Factor hardening (logging, health/db checks), Alembic migrations, then Kubernetes (kind).
+# 2) Build and load API image into kind
+docker build -t stack-1-fastapi:dev .
+kind load docker-image stack-1-fastapi:dev --name stack1
 
-```
+# 3) Apply base manifests
+kubectl apply -f k8s/00-namespace.yaml
+kubectl apply -f k8s/config.yaml
 
-::contentReference[oaicite:0]{index=0}
-```
+# 4) Apply local secrets (NOT committed)
+kubectl apply -f k8s/app-secrets.yaml
+
+# 5) Vault + seed
+kubectl apply -f k8s/vault.yaml
+kubectl apply -f k8s/vault-seed.yaml
+kubectl -n stack1 wait --for=condition=complete job/vault-seed --timeout=120s
+
+# 6) Postgres + API
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/api.yaml
+kubectl -n stack1 get pods -w
